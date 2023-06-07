@@ -2,8 +2,14 @@
 const { stat } = require('fs');
 const process = require('process');
 const { resolve } = require('path');
+const { TwingEnvironment, TwingLoaderFilesystem, TwingFunction} = require('twing');
 // modules
-const Twig = require('twig');
+const twingLoader = new TwingLoaderFilesystem();
+const twing = new TwingEnvironment(twingLoader, {
+  'cache': false,
+});
+twing.extendFilter = twing.addFilter;
+twing.extendFunction = twing.addFunction;
 
 /**
  * Retrieves options from the configuration file
@@ -35,9 +41,23 @@ const Twig = require('twig');
  * @param {object} extensions
  */
 function configureTwig({ functions = {}, filters = {} } = {}) {
-  Twig.cache(false);
-  Object.entries(filters).forEach(([key, fn]) => Twig.extendFilter(key, fn));
-  Object.entries(functions).forEach(([key, fn]) => Twig.extendFunction(key, fn));
+  const options = retrieveOptions();
+  if (options.templatePath) {
+    loader.addPath(options.templatePath);
+  }
+  if (options.namespaces) {
+    Object.entries(options.namespaces).forEach(([key, value]) => {
+      twingLoader.addPath(value, key);
+    });
+  }
+  Object.entries(filters).forEach(([key, fn]) => {
+    const twingFilter = new TwingFilter(key, value);
+    twing.addFilter(twingFilter);
+  });
+  Object.entries(functions).forEach(([key, fn]) => {
+    const twingFunction = new TwingFunction(key, value);
+    twing.addFunction(twingFunction);
+  });
 }
 
 /**
@@ -49,12 +69,8 @@ function configureTwig({ functions = {}, filters = {} } = {}) {
  */
 function renderTemplate(template, context = {}, settings = {}) {
   return new Promise((resolve, reject) => {
-    Twig.renderFile(template, { ...context, settings }, (err, html) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(html);
-      }
+    twing.render(template, {...context, settings}).then(html => {
+      resolve(html);
     });
   });
 }
@@ -62,3 +78,5 @@ function renderTemplate(template, context = {}, settings = {}) {
 module.exports.retrieveOptions = retrieveOptions;
 module.exports.configureTwig = configureTwig;
 module.exports.renderTemplate = renderTemplate;
+module.exports.twing = twing;
+module.exports.loader = twingLoader;

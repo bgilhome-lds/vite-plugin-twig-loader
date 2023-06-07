@@ -2,7 +2,7 @@
 const fs = require('fs');
 const { extname } = require('path');
 // render functions
-const { retrieveOptions, configureTwig, renderTemplate } = require('./tasks');
+const { retrieveOptions, configureTwig, renderTemplate, twing, twingLoader } = require('./tasks');
 
 /**
  * @param {import('.').Options} options
@@ -48,6 +48,8 @@ module.exports = (options) => {
       if (extname(file) === '.twig') {
         server.ws.send({ type: 'full-reload' })
       }
-    }
+    },
+    twing,
+    twingLoader
   };
 };
